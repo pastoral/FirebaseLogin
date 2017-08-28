@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center">
+
+        <EditText
+            android:id="@+id/etProfileInput"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:hint=""
+            android:inputType="textMultiLine"
+            android:lines="8"
+            android:maxLines="3"
+            android:minLines="6"
+            android:scrollbars="vertical"
+            android:visibility="gone"
+            android:text="User Name"
+            />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="@string/change_profile_picture"
+            android:id="@+id/btnChangePic"/>
+
+    </FrameLayout>
+
+</LinearLayout>
