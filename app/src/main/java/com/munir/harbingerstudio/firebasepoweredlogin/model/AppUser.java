@@ -8,71 +8,42 @@ import android.net.Uri;
  */
 
 public class AppUser {
-    private String uId;
+    private String uid;
     private String name;
     private String email;
     private String phoneNumber;
-    private Location location;
-    private String area;
-    private String gender;
-    private Uri photoUrl;
+    private Uri photoURL;
+    private String providerId;
+    private String location;
+    private String[] model;
+    private String[] imei;
+    private String userCategoryText;
+    private String userCategoryImage;
 
 
-    public AppUser(String uId, String name, String email, Uri photoUrl) {
-        this.uId = uId;
-        this.name = name;
-        this.email = email;
-        this.photoUrl = photoUrl;
+    public AppUser() {
     }
 
-    public AppUser(String name, String email, Uri photoUrl) {
-        this.name = name;
-        this.email = email;
-        this.photoUrl = photoUrl;
-    }
-
-    public AppUser(String name, String email, Uri photoUrl, String phoneNumber) {
-        this.name = name;
-        this.email = email;
-        this.photoUrl = photoUrl;
-        this.phoneNumber = phoneNumber;
-    }
-
-    public AppUser(String uId, String name, String email, Uri photoUrl, String phoneNumber) {
-        this.uId = uId;
-        this.name = name;
-        this.email = email;
-        this.photoUrl = photoUrl;
-        this.phoneNumber = phoneNumber;
-    }
-
-    public AppUser(String uId, String name, String email, String phoneNumber, Location location, String area, String gender, Uri photoUrl) {
-        this.uId = uId;
+    public AppUser(String uid, String name, String email, String phoneNumber, Uri photoURL, String providerId, String location, String[] model, String[] imei, String userCategoryText, String userCategoryImage) {
+        this.uid = uid;
         this.name = name;
         this.email = email;
         this.phoneNumber = phoneNumber;
+        this.photoURL = photoURL;
+        this.providerId = providerId;
         this.location = location;
-        this.area = area;
-        this.gender = gender;
-        this.photoUrl = photoUrl;
+        this.model = model;
+        this.imei = imei;
+        this.userCategoryText = userCategoryText;
+        this.userCategoryImage = userCategoryImage;
     }
 
-    public AppUser(String name, String email, String phoneNumber, Location location, String area, String gender, Uri photoUrl) {
-        this.name = name;
-        this.email = email;
-        this.phoneNumber = phoneNumber;
-        this.location = location;
-        this.area = area;
-        this.gender = gender;
-        this.photoUrl = photoUrl;
+    public String getUid() {
+        return uid;
     }
 
-    public String getuId() {
-        return uId;
-    }
-
-    public void setuId(String uId) {
-        this.uId = uId;
+    public void setUid(String uid) {
+        this.uid = uid;
     }
 
     public String getName() {
@@ -99,35 +70,59 @@ public class AppUser {
         this.phoneNumber = phoneNumber;
     }
 
-    public Location getLocation() {
+    public Uri getPhotoURL() {
+        return photoURL;
+    }
+
+    public void setPhotoURL(Uri photoURL) {
+        this.photoURL = photoURL;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+
+    public String getLocation() {
         return location;
     }
 
-    public void setLocation(Location location) {
+    public void setLocation(String location) {
         this.location = location;
     }
 
-    public String getArea() {
-        return area;
+    public String[] getModel() {
+        return model;
     }
 
-    public void setArea(String area) {
-        this.area = area;
+    public void setModel(String[] model) {
+        this.model = model;
     }
 
-    public String getGender() {
-        return gender;
+    public String[] getImei() {
+        return imei;
     }
 
-    public void setGender(String gender) {
-        this.gender = gender;
+    public void setImei(String[] imei) {
+        this.imei = imei;
     }
 
-    public Uri getPhotoUrl() {
-        return photoUrl;
+    public String getUserCategoryText() {
+        return userCategoryText;
     }
 
-    public void setPhotoUrl(Uri photoUrl) {
-        this.photoUrl = photoUrl;
+    public void setUserCategoryText(String userCategoryText) {
+        this.userCategoryText = userCategoryText;
+    }
+
+    public String getUserCategoryImage() {
+        return userCategoryImage;
+    }
+
+    public void setUserCategoryImage(String userCategoryImage) {
+        this.userCategoryImage = userCategoryImage;
     }
 }

@@ -91,5 +91,9 @@
     <string name="change_password"><u>Change Password</u></string>
     <string name="delete_account"><u>Delete Account</u></string>
     <string name="email_hint"><i>john@email.com</i></string>
+    <string name="name_hint"><i>John Doe</i></string>
+    <string name="location_hint"><i>Gulshan,Dhaka,Bangladesh</i></string>
+    <string name="edit_profile">Edit Profile</string>
+
 
 </resources>
