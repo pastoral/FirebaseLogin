@@ -78,7 +78,17 @@
                     android:layout_height="match_parent"
                     android:orientation="vertical"
                     android:layout_marginBottom="20dp"
-                    >
+                    android:gravity="bottom">
+                    <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:textColor="@color/colorPrimary"
+                        android:background="#0000"
+                        android:padding="16dp"
+                        android:text="@string/change_profile_picture"
+                        android:onClick="changeProfilePic"
+                    />
 
                 </LinearLayout>
             </LinearLayout>

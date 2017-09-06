@@ -1,6 +1,7 @@
 package com.munir.harbingerstudio.firebasepoweredlogin;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.graphics.Color;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -15,10 +16,10 @@ import android.widget.TextView;
 public class BaseActivity extends AppCompatActivity {
     public ProgressDialog mProgressDialog;
 
-    public void showProgressDialog(){
+    public void showProgressDialog(String message, Context context){
         if(mProgressDialog==null){
-            mProgressDialog = new ProgressDialog(this);
-            mProgressDialog.setMessage(getString(R.string.loading));
+            mProgressDialog = new ProgressDialog(context);
+            mProgressDialog.setMessage(message);
             mProgressDialog.setIndeterminate(true);
         }
         mProgressDialog.show();
