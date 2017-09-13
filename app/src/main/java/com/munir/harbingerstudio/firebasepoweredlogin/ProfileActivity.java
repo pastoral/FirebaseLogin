@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
@@ -49,6 +50,7 @@ import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.munir.harbingerstudio.firebasepoweredlogin.model.AppUser;
+//import com.nguyenhoanglam.imagepicker.model.Config;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -56,6 +58,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static android.R.id.progress;
 
 
 public class ProfileActivity extends BaseActivity {
@@ -72,19 +76,24 @@ public class ProfileActivity extends BaseActivity {
     public final int REQUEST_CODE_PICKER = 123;
     private FirebaseStorage firebaseStorage;
     private StorageReference storageReference, profilepicReference;
-
+    //uri to store file
+    private Uri filePath;
+    public static final int permsRequestCode = 20;
+    public static String[] permisionList = { "android.permission.ACCESS_FINE_LOCATION" , "android.permission.ACCESS_COARSE_LOCATION",
+                                            "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
+                                            "android.permission.WRITE_EXTERNAL_STORAGE" , "android.permission.READ_PHONE_STATE"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_profile);
+        ProfileActivity.super.requestAppPermissions(permisionList, R.string.runtime_permissions_txt, permsRequestCode);
         //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         //setSupportActionBar(toolbar);
         databaseReference = FirebaseDatabase.getInstance().getReference();
         dbUserRef = databaseReference.child("users");
         firebaseStorage = FirebaseStorage.getInstance();
-        storageReference = firebaseStorage.getReference();
-
+        storageReference = firebaseStorage.getInstance().getReference();
 
         //showProgressDialog();
         userName = (TextView) findViewById(R.id.userName);
@@ -115,8 +124,25 @@ public class ProfileActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        getUserData(dbUserRef);
-        showProgressDialog("Loading user information", ProfileActivity.this);
+
+        dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                    //appUser = postSnapshot.getValue(AppUser.class);
+                    showProgressDialog("Loading user information", ProfileActivity.this);
+                    userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
+                    updateUI();
+
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
     }
 
     public void logout(View v) {
@@ -227,24 +253,6 @@ public class ProfileActivity extends BaseActivity {
         return pattern.matcher(email).matches();
     }
 
-    public void getUserData(DatabaseReference dbRef) {
-        dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                    //appUser = postSnapshot.getValue(AppUser.class);
-                    userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
-                    updateUI();
-
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
-    }
 
 
     public void editProfile(View view) {
@@ -353,7 +361,7 @@ public class ProfileActivity extends BaseActivity {
                 .single() // single mode
                 .limit(1) // max images can be selected (99 by default)
                 .showCamera(true) // show camera or not (true by default)
-                .imageDirectory("Camera") // directory name for captured image  ("Camera" folder by default)
+                .imageDirectory("Pictures") // directory name for captured image  ("Camera" folder by default)
                 .start(REQUEST_CODE_PICKER); // start image picker activity with request code
     }
 
@@ -361,35 +369,41 @@ public class ProfileActivity extends BaseActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode==REQUEST_CODE_PICKER && resultCode== RESULT_OK && data!= null){
             ArrayList<Image> images = (ArrayList<Image>) ImagePicker.getImages(data);
+           // ArrayList<Image> images = data.getParcelableArrayListExtra(Config.EXTRA_IMAGES);
             String name = images.get(0).getName();
             String path = images.get(0).getPath();
-            Uri file = Uri.fromFile(new File(path));
 
+            File renmedFile = renameFile(path);
+            Uri file = Uri.fromFile(renmedFile);
+
+            //profilepicReference = storageReference.child("profilepic" + file.getLastPathSegment());
             profilepicReference = storageReference.child("profilepic/" + file.getLastPathSegment());
 
+           // showProgressDialog("Uploading...." , ProfileActivity.this);
             UploadTask uploadTask = profilepicReference.putFile(file);
 
             uploadTask.addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
+                   // hideProgressDialog();
                     double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                    showProgressDialog("Uploading...." +progress + " %" , ProfileActivity.this);
+                    showProgressDialog("Uploading...." +(int)progress + " %" , ProfileActivity.this);
                 }
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                     Uri downloadUrl = taskSnapshot.getMetadata().getDownloadUrl();
                     try{
-                        dbUserRef.child(user.getUid()).child("photoURL").setValue(downloadUrl.toString());
+                        //dbUserRef.child(user.getUid()).child("photoURL").setValue(downloadUrl.toString());
                         String temp = " ";
-                       // updateUI();
+                        updateUI();
                         //hideProgressDialog();
                         showSnack(coordinate_profile,"Profile picture changed");
                     }
                     catch (Exception e) {
                         e.printStackTrace();
                     }
-                   // hideProgressDialog();
+                    // hideProgressDialog();
 
                 }
             }).addOnFailureListener(new OnFailureListener() {
@@ -404,21 +418,29 @@ public class ProfileActivity extends BaseActivity {
 
     }
 
-    public String getRealPathFromURI(Uri contentURI, Activity context) {
-        String[] projection = { MediaStore.Images.Media.DATA };
-        @SuppressWarnings("deprecation")
-        Cursor cursor = context.managedQuery(contentURI, projection, null,
-                null, null);
-        if (cursor == null)
-            return null;
-        int column_index = cursor
-                .getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        if (cursor.moveToFirst()) {
-            String s = cursor.getString(column_index);
-            // cursor.close();
-            return s;
+
+    private File renameFile(String path){
+        File dir = Environment.getExternalStorageDirectory();
+        File from = null;
+        File to = null;
+        File temp = null;
+        if(dir.exists()){
+            from = new File(path);
+            //to = new File(dir, path);
+            temp = from;
+
+            String splited [] = path.split("/") ;
+            String lastVal = splited[splited.length-1];
+            String splitedExt  = lastVal.substring(lastVal.length()-4);
+            //String extension = splitedExt[1];
+            String dirName = path.substring(0,path.length()-lastVal.length());
+            to = new File(dirName+user.getUid()+((int)(Math.random()*9000)+1000)+splitedExt);
+
+            if(temp.exists())
+                temp.renameTo(to);
         }
-        // cursor.close();
-        return null;
+        //String rename = to.getName();
+        //String temp = " ";
+        return to;
     }
 }

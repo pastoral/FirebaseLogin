@@ -95,5 +95,7 @@
     <string name="location_hint"><i>Gulshan,Dhaka,Bangladesh</i></string>
     <string name="edit_profile">Edit Profile</string>
 
+    <string name="runtime_permissions_txt">Please enable ALL permissions from app settings</string>
+
 
 </resources>
