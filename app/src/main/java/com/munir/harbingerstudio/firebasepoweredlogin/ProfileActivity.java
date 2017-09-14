@@ -4,13 +4,18 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.IntentSender;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.telephony.TelephonyManager;
@@ -30,6 +35,23 @@ import com.bumptech.glide.Glide;
 import com.esafirm.imagepicker.features.ImagePicker;
 import com.esafirm.imagepicker.model.Image;
 import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -61,9 +83,14 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static android.R.id.progress;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.REQUEST_CHECK_SETTINGS;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.UPDATE_INTERVAL_IN_MILLISECONDS;
 
 
-public class ProfileActivity extends BaseActivity {
+public class ProfileActivity extends BaseActivity  implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, ResultCallback<LocationSettingsResult>, LocationListener {
     private String name, email, uid, editedEmail, userProvider;
 
     private TextView userName, userEmail, changeEmail, userLocation, phoneNumber;
@@ -77,14 +104,29 @@ public class ProfileActivity extends BaseActivity {
     public final int REQUEST_CODE_PICKER = 123;
     private FirebaseStorage firebaseStorage;
     private StorageReference storageReference, profilepicReference;
-    //uri to store file
-    private Uri filePath;
     public AppUser appUser;
     public static final int permsRequestCode = 20;
     public static String[] permisionList = { "android.permission.ACCESS_FINE_LOCATION" , "android.permission.ACCESS_COARSE_LOCATION",
                                             "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
                                             "android.permission.WRITE_EXTERNAL_STORAGE" , "android.permission.READ_PHONE_STATE"};
 
+    private boolean mRequestingLocationUpdates;
+    protected LocationRequest mLocationRequest;
+    private SupportMapFragment mapFragment;
+    public LocationSettingsRequest mLocationSettingsRequest;
+    public PlaceAutocompleteFragment autocompleteFragment;
+    //private ResponeReceiver receiver;
+    private IntentFilter filter;
+
+    private Location mLastLocation;
+
+
+
+
+    private GoogleMap mMap;
+    private CameraPosition mCameraPosition;
+    private GoogleApiClient mGoogleApiClient;
+    private String placeName,vicinity = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,11 +150,23 @@ public class ProfileActivity extends BaseActivity {
         coordinate_profile = (CoordinatorLayout) findViewById(R.id.coordinate_profile);
         button_change_password = (Button) findViewById(R.id.button_change_password);
 
+        buildGoogleApiClient();
+        createLocationRequest();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+
+        mLastLocation = new Location("");
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
+        }
+        //receiver = new ResponeReceiver();
+        if(!mRequestingLocationUpdates){
+            mRequestingLocationUpdates = true;
+        }
+
         if (user != null) {
 
         } else {
@@ -121,9 +175,15 @@ public class ProfileActivity extends BaseActivity {
         }
     }
 
+
+
     @Override
     protected void onResume() {
         super.onResume();
+        checkLocationSettings();
+        if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
+            startLocationUpdate();
+        }
         dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -145,6 +205,20 @@ public class ProfileActivity extends BaseActivity {
         });
 
 
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdate();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
     }
 
     public void logout(View v) {
@@ -416,6 +490,15 @@ public class ProfileActivity extends BaseActivity {
                 }
             });
         }
+        if(requestCode==REQUEST_CHECK_SETTINGS){
+            if(resultCode == RESULT_OK){
+                mRequestingLocationUpdates = true;
+            }
+
+            if(resultCode == RESULT_CANCELED){
+                Log.i("ThreeFragment", "User chose not to make required location settings changes.");
+            }
+        }
         super.onActivityResult(requestCode, resultCode, data);
 
     }
@@ -478,6 +561,134 @@ public class ProfileActivity extends BaseActivity {
                 dbUserRef.child(user.getUid()).child("phoneNumber").setValue(m);
             }
         }*/
+    }
+
+    private void startLocationUpdate(){
+        Log.d("STARTLOC update", "startLocationUpdate fired");
+        if(ContextCompat.checkSelfPermission(ProfileActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        }
+       /* Intent intent = new Intent(this, BackgroundLocationService.class);
+        intent.putExtra("requestId", 101);
+        startService(intent);*/
+
+    }
+
+    private void stopLocationUpdate(){
+        /*Intent intent = new Intent(this, BackgroundLocationService.class);
+        intent.putExtra("requestId", 101);
+        stopService(intent);*/
+
+        if(mGoogleApiClient.isConnected()) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+        }
+
+    }
+
+    @Override
+    public void onConnected(Bundle connectionHint) {
+        if(mRequestingLocationUpdates){
+            startLocationUpdate();
+        }
+    }
+
+    /**
+     * Handles failure to connect to the Google Play services client.
+     */
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult result) {
+        // Refer to the reference doc for ConnectionResult to see what error codes might
+        // be returned in onConnectionFailed.
+        Log.d("Profile Activity: ", "Play services connection failed: ConnectionResult.getErrorCode() = "
+                + result.getErrorCode());
+    }
+
+    /**
+     * Handles suspension of the connection to the Google Play services client.
+     */
+    @Override
+    public void onConnectionSuspended(int cause) {
+        mGoogleApiClient.connect();
+        Log.d("Profile Activity: " , "Play services connection suspended");
+    }
+
+
+    private void getLocationData() {
+        if (mLastLocation == null) {
+            if (ContextCompat.checkSelfPermission(ProfileActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                mLastLocation = LocationServices.FusedLocationApi
+                        .getLastLocation(mGoogleApiClient);
+            }
+        }
+    }
+
+    /**
+     * Check if the device's location settings are adequate for the app's needs using the
+     * {@link com.google.android.gms.location.SettingsApi#checkLocationSettings(GoogleApiClient,
+     * LocationSettingsRequest)} method, with the results provided through a {@code PendingResult}.
+     */
+    public void checkLocationSettings() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(createLocationRequest());
+
+        PendingResult<LocationSettingsResult> result = LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,builder.build());
+        result.setResultCallback(this);
+
+    }
+
+    @Override
+    public void onResult(@NonNull LocationSettingsResult locationSettingsResult) {
+        final Status status = locationSettingsResult.getStatus();
+        switch(status.getStatusCode()){
+            case LocationSettingsStatusCodes.SUCCESS :
+                Log.i("Profile Activity : ", "All location settings are satisfied.");
+                startLocationUpdate();
+                //stopLocationUpdate();
+                break;
+            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED :
+                Log.i("Profile Activity : ", "Location settings are not satisfied. Show the user a dialog to" +
+                        "upgrade location settings ");
+                try{
+                    status.startResolutionForResult(this, REQUEST_CHECK_SETTINGS);
+                }
+                catch(IntentSender.SendIntentException e){
+                    Log.i("Profile Activity : ", "PendingIntent unable to execute request.");
+                }
+                break;
+            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE :
+                Log.i("Profile Activity : ", "Location settings are inadequate, and cannot be fixed here. Dialog " +
+                        "not created.");
+                break;
+        }
+    }
+
+    protected LocationRequest createLocationRequest() {
+        Log.i("Profile Activity : ", "createLocationRequest()");
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
+        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(10);
+        return mLocationRequest;
+    }
+
+    protected synchronized void buildGoogleApiClient(){
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .enableAutoManage(this /* FragmentActivity */,
+                        this /* OnConnectionFailedListener */)
+                .addConnectionCallbacks(this)
+                .addApi(LocationServices.API)
+                .addApi(Places.GEO_DATA_API)
+                .addApi(Places.PLACE_DETECTION_API)
+                .build();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        mLastLocation = location;
+        String lat = String.valueOf(mLastLocation.getLatitude());
+        String lan  = String.valueOf(mLastLocation.getLongitude());
+        Toast.makeText(this, lat + "  " + lan, Toast.LENGTH_SHORT).show();
     }
 
 
