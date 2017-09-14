@@ -3,6 +3,9 @@ package com.munir.harbingerstudio.firebasepoweredlogin.model;
 import android.location.Location;
 import android.net.Uri;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by AppUser on 8/18/2017.
  */
@@ -12,11 +15,11 @@ public class AppUser {
     private String name;
     private String email;
     private String phoneNumber;
-    private Uri photoURL;
+    private String photoURL;
     private String providerId;
     private String location;
-    private String[] model;
-    private String[] imei;
+    public List<Object> model;
+    public List<Object> imei;
     private String userCategoryText;
     private String userCategoryImage;
 
@@ -24,7 +27,7 @@ public class AppUser {
     public AppUser() {
     }
 
-    public AppUser(String uid, String name, String email, String phoneNumber, Uri photoURL, String providerId, String location, String[] model, String[] imei, String userCategoryText, String userCategoryImage) {
+    public AppUser(String uid, String name, String email, String phoneNumber, String photoURL, String providerId, String location, List<Object> imei, List<Object> model, String userCategoryText, String userCategoryImage) {
         this.uid = uid;
         this.name = name;
         this.email = email;
@@ -32,8 +35,8 @@ public class AppUser {
         this.photoURL = photoURL;
         this.providerId = providerId;
         this.location = location;
-        this.model = model;
         this.imei = imei;
+        this.model = model;
         this.userCategoryText = userCategoryText;
         this.userCategoryImage = userCategoryImage;
     }
@@ -70,11 +73,11 @@ public class AppUser {
         this.phoneNumber = phoneNumber;
     }
 
-    public Uri getPhotoURL() {
+    public String getPhotoURL() {
         return photoURL;
     }
 
-    public void setPhotoURL(Uri photoURL) {
+    public void setPhotoURL(String photoURL) {
         this.photoURL = photoURL;
     }
 
@@ -94,19 +97,19 @@ public class AppUser {
         this.location = location;
     }
 
-    public String[] getModel() {
+    public List<Object> getModel() {
         return model;
     }
 
-    public void setModel(String[] model) {
+    public void setModel(List<Object> model) {
         this.model = model;
     }
 
-    public String[] getImei() {
+    public List<Object> getImei() {
         return imei;
     }
 
-    public void setImei(String[] imei) {
+    public void setImei(List<Object> imei) {
         this.imei = imei;
     }
 

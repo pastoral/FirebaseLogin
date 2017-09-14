@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
+import android.telephony.TelephonyManager;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
@@ -78,6 +79,7 @@ public class ProfileActivity extends BaseActivity {
     private StorageReference storageReference, profilepicReference;
     //uri to store file
     private Uri filePath;
+    public AppUser appUser;
     public static final int permsRequestCode = 20;
     public static String[] permisionList = { "android.permission.ACCESS_FINE_LOCATION" , "android.permission.ACCESS_COARSE_LOCATION",
                                             "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
@@ -112,9 +114,7 @@ public class ProfileActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         if (user != null) {
-            // loadDataFromFirebase(databaseReference);
 
-            // loadUserData(user);
         } else {
             startActivity(new Intent(getApplicationContext(), MainActivity.class));
             finish();
@@ -124,7 +124,6 @@ public class ProfileActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
         dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -132,7 +131,9 @@ public class ProfileActivity extends BaseActivity {
                     //appUser = postSnapshot.getValue(AppUser.class);
                     showProgressDialog("Loading user information", ProfileActivity.this);
                     userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
+                    appUser = postSnapshot.getValue(AppUser.class);
                     updateUI();
+                    getExistingImei();
 
                 }
             }
@@ -142,6 +143,7 @@ public class ProfileActivity extends BaseActivity {
 
             }
         });
+
 
     }
 
@@ -443,4 +445,40 @@ public class ProfileActivity extends BaseActivity {
         //String temp = " ";
         return to;
     }
+
+    public void getExistingImei(){
+        ArrayList<String> existingImeiList = new ArrayList<>();
+        ArrayList<String> existingModelList = new ArrayList<>();
+        ModelInfo modelInfo = new ModelInfo();
+
+        for(int i=0; i<appUser.getImei().size(); i++){
+            existingImeiList.add(appUser.imei.get(i).toString());
+        }
+        for(int i=0; i<appUser.getModel().size(); i++){
+            existingModelList.add(appUser.model.get(i).toString());
+        }
+        TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(getApplicationContext().TELEPHONY_SERVICE);
+        TelephonyManager tMgr = (TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
+        String modelName = "";
+        if(modelInfo.getSystemProperty("ro.product.device").length()>0){
+            modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.product.device");
+        }
+        else{
+            modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.build.product");
+        }
+        if(!existingImeiList.contains(modelInfo.getDeviceImei(mTelephonyManager))){
+            existingImeiList.add(modelInfo.getDeviceImei(mTelephonyManager));
+            dbUserRef.child(user.getUid()).child("imei").setValue(existingImeiList);
+            existingModelList.add(modelName);
+            dbUserRef.child(user.getUid()).child("model").setValue(existingModelList);
+        }
+       /* if(!userDataMap.get("providerId").toString().equals("phone")){
+            if(modelInfo.isSimSupport(mTelephonyManager,getApplicationContext())) {
+                String m = modelInfo.getPhoneNumber(getApplicationContext());
+                dbUserRef.child(user.getUid()).child("phoneNumber").setValue(m);
+            }
+        }*/
+    }
+
+
 }
