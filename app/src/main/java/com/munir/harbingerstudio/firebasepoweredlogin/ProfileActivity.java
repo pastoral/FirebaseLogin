@@ -7,7 +7,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
+
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -51,18 +53,15 @@ import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.Marker;
+
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.EmailAuthProvider;
-import com.google.firebase.auth.FacebookAuthProvider;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.GoogleAuthProvider;
-import com.google.firebase.auth.PhoneAuthProvider;
-import com.google.firebase.auth.UserProfileChangeRequest;
+
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -76,9 +75,12 @@ import com.munir.harbingerstudio.firebasepoweredlogin.model.AppUser;
 //import com.nguyenhoanglam.imagepicker.model.Config;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -181,6 +183,7 @@ public class ProfileActivity extends BaseActivity  implements
     protected void onResume() {
         super.onResume();
         checkLocationSettings();
+        getLocationData();
         if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
             startLocationUpdate();
         }
@@ -247,6 +250,9 @@ public class ProfileActivity extends BaseActivity  implements
             userProvider = userDataMap.get("providerId").toString();
             if (userProvider.equals("password")) {
                 button_change_password.setVisibility(View.VISIBLE);
+            }
+            if(mLastLocation != null){
+                String address = getAddress(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             }
         }
     }
@@ -463,7 +469,12 @@ public class ProfileActivity extends BaseActivity  implements
                 public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
                    // hideProgressDialog();
                     double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                    showProgressDialog("Uploading...." +(int)progress + " %" , ProfileActivity.this);
+                    if(!((Activity) ProfileActivity.this).isFinishing())
+                    {
+                        //show dialog
+                        showProgressDialog("Uploading...." +(int)progress + " %" , ProfileActivity.this);
+                    }
+
                 }
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
@@ -685,10 +696,45 @@ public class ProfileActivity extends BaseActivity  implements
 
     @Override
     public void onLocationChanged(Location location) {
+        String address = "";
         mLastLocation = location;
-        String lat = String.valueOf(mLastLocation.getLatitude());
-        String lan  = String.valueOf(mLastLocation.getLongitude());
-        Toast.makeText(this, lat + "  " + lan, Toast.LENGTH_SHORT).show();
+        if(mLastLocation != null) {
+            double lat = mLastLocation.getLatitude();
+            double lan = mLastLocation.getLongitude();
+            address = getAddress(lat,lan);
+        }
+
+        try{
+            if(address.length()>3){
+                dbUserRef.child(user.getUid()).child("location").setValue(address);
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+
+
+       // Toast.makeText(this, address, Toast.LENGTH_SHORT).show();
+    }
+
+    private String getAddress(double latitude, double longitude) {
+        StringBuilder result = new StringBuilder();
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if (addresses.size() > 0) {
+                //Address address = addresses.get(0);
+               // result.append(address.getLocality()).append("\n");
+               // result.append(address.getCountryName());
+                result.append(addresses.get(0).getAddressLine(0)+"#");
+                result.append(addresses.get(0).getLocality() + "#");
+                result.append(addresses.get(0).getCountryName());
+            }
+        } catch (IOException e) {
+            Log.e("tag", e.getMessage());
+        }
+
+        return result.toString();
     }
 
 

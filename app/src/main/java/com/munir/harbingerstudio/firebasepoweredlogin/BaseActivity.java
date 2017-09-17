@@ -22,7 +22,7 @@ import android.widget.TextView;
  */
 
 public class BaseActivity extends AppCompatActivity {
-    public ProgressDialog mProgressDialog;
+    public static ProgressDialog mProgressDialog;
     private SparseIntArray mErrorString;
     private int permissionCheck;
     public boolean permissionGranted;
@@ -32,7 +32,7 @@ public class BaseActivity extends AppCompatActivity {
     }
 
 
-    public void showProgressDialog(String message, Context context){
+    public static void showProgressDialog(String message, Context context){
         if(mProgressDialog==null){
             mProgressDialog = new ProgressDialog(context);
             mProgressDialog.setMessage(message);
