@@ -29,7 +29,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class MainActivity extends AppCompatActivity  {
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.permisionList;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.permsRequestCode;
+
+public class MainActivity extends BaseActivity  {
     private FirebaseAuth firebaseAuth;
     private FirebaseUser firebaseUser;
     private static final int RC_SIGN_IN = 123;
@@ -46,14 +49,14 @@ public class MainActivity extends AppCompatActivity  {
 
         firebaseAuth = FirebaseAuth.getInstance();
         relativeLayout = (RelativeLayout)findViewById(R.id.activity_main_rel);
-       // listLoginProvider = (ListView)findViewById(R.id.login_list_view);
+        // listLoginProvider = (ListView)findViewById(R.id.login_list_view);
 
         //listLoginProvider.setAdapter(adapter);
         //listLoginProvider.setOnItemClickListener(this);
-         googleIdp = new AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER)
+        googleIdp = new AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER)
                 .setPermissions(Arrays.asList(Scopes.PROFILE)).build();
-         facebookIdp = new AuthUI.IdpConfig.Builder(AuthUI.FACEBOOK_PROVIDER)
-                 .setPermissions(Arrays.asList("user_friends")).build();
+        facebookIdp = new AuthUI.IdpConfig.Builder(AuthUI.FACEBOOK_PROVIDER)
+                .setPermissions(Arrays.asList("user_friends")).build();
     }
 
     @Override
@@ -70,7 +73,7 @@ public class MainActivity extends AppCompatActivity  {
             //pl = (Parcelable)userData;
             Intent intent = new Intent(this, ProfileActivity.class);
             //intent.putParcelableArrayListExtra("userdata", pl);
-           // startActivity(new Intent(this, ProfileActivity.class));
+            // startActivity(new Intent(this, ProfileActivity.class));
             startActivity(intent);
             finish();
             return;
@@ -82,7 +85,7 @@ public class MainActivity extends AppCompatActivity  {
                                     new AuthUI.IdpConfig.Builder(AuthUI.PHONE_VERIFICATION_PROVIDER).build(),
                                     googleIdp,
                                     new AuthUI.IdpConfig.Builder(AuthUI.FACEBOOK_PROVIDER).build()
-                                    ))
+                            ))
                     .build(),RC_SIGN_IN);
         }
     }
@@ -103,7 +106,7 @@ public class MainActivity extends AppCompatActivity  {
             if(resultCode== ResultCodes.OK){
                 IdpResponse idpResponse = IdpResponse.fromResultIntent(data);
                 startActivity(new Intent(this,ProfileActivity.class)
-                            .putExtra("my_token", idpResponse.getIdpToken()));
+                        .putExtra("my_token", idpResponse.getIdpToken()));
                 finish();
                 return;
             }
@@ -129,23 +132,17 @@ public class MainActivity extends AppCompatActivity  {
 
 
    /* public static class MyArrayAdapter extends ArrayAdapter<Class> {
-
         private Context mContext;
         private Class[] mClasses;
         private int[] mDescriptionIds;
-
         public MyArrayAdapter(Context context, int resource, Class[] objects) {
             super(context, resource, objects);
-
             mContext = context;
             mClasses = objects;
         }
-
         public void setmDescriptionIds(int[] mDescriptionIds) {
             this.mDescriptionIds = mDescriptionIds;
         }
-
-
         @NonNull
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -158,6 +155,5 @@ public class MainActivity extends AppCompatActivity  {
             ((TextView) view.findViewById(android.R.id.text2)).setText(mDescriptionIds[position]);
             return view;
         }
-
     } */
 }

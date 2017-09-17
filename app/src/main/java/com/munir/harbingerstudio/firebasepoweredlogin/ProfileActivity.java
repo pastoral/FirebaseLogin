@@ -1,5 +1,7 @@
 package com.munir.harbingerstudio.firebasepoweredlogin;
 
+import android.*;
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -88,6 +90,8 @@ import static android.R.id.progress;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.REQUEST_CHECK_SETTINGS;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.UPDATE_INTERVAL_IN_MILLISECONDS;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.permisionList;
+import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.permsRequestCode;
 
 
 public class ProfileActivity extends BaseActivity  implements
@@ -107,10 +111,7 @@ public class ProfileActivity extends BaseActivity  implements
     private FirebaseStorage firebaseStorage;
     private StorageReference storageReference, profilepicReference;
     public AppUser appUser;
-    public static final int permsRequestCode = 20;
-    public static String[] permisionList = { "android.permission.ACCESS_FINE_LOCATION" , "android.permission.ACCESS_COARSE_LOCATION",
-                                            "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
-                                            "android.permission.WRITE_EXTERNAL_STORAGE" , "android.permission.READ_PHONE_STATE"};
+
 
     private boolean mRequestingLocationUpdates;
     protected LocationRequest mLocationRequest;
@@ -170,7 +171,7 @@ public class ProfileActivity extends BaseActivity  implements
         }
 
         if (user != null) {
-
+           // showProgressDialog("Loading user information", ProfileActivity.this);
         } else {
             startActivity(new Intent(getApplicationContext(), MainActivity.class));
             finish();
@@ -183,7 +184,6 @@ public class ProfileActivity extends BaseActivity  implements
     protected void onResume() {
         super.onResume();
         checkLocationSettings();
-        getLocationData();
         if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
             startLocationUpdate();
         }
@@ -192,11 +192,12 @@ public class ProfileActivity extends BaseActivity  implements
             public void onDataChange(DataSnapshot dataSnapshot) {
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
                     //appUser = postSnapshot.getValue(AppUser.class);
-                    showProgressDialog("Loading user information", ProfileActivity.this);
+
                     userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
                     appUser = postSnapshot.getValue(AppUser.class);
-                    updateUI();
                     getExistingImei();
+                    updateUI();
+
 
                 }
             }
@@ -250,9 +251,6 @@ public class ProfileActivity extends BaseActivity  implements
             userProvider = userDataMap.get("providerId").toString();
             if (userProvider.equals("password")) {
                 button_change_password.setVisibility(View.VISIBLE);
-            }
-            if(mLastLocation != null){
-                String address = getAddress(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             }
         }
     }
@@ -451,7 +449,7 @@ public class ProfileActivity extends BaseActivity  implements
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode==REQUEST_CODE_PICKER && resultCode== RESULT_OK && data!= null){
             ArrayList<Image> images = (ArrayList<Image>) ImagePicker.getImages(data);
-           // ArrayList<Image> images = data.getParcelableArrayListExtra(Config.EXTRA_IMAGES);
+            // ArrayList<Image> images = data.getParcelableArrayListExtra(Config.EXTRA_IMAGES);
             String name = images.get(0).getName();
             String path = images.get(0).getPath();
 
@@ -461,20 +459,18 @@ public class ProfileActivity extends BaseActivity  implements
             //profilepicReference = storageReference.child("profilepic" + file.getLastPathSegment());
             profilepicReference = storageReference.child("profilepic/" + file.getLastPathSegment());
 
-           // showProgressDialog("Uploading...." , ProfileActivity.this);
+            // showProgressDialog("Uploading...." , ProfileActivity.this);
             UploadTask uploadTask = profilepicReference.putFile(file);
 
             uploadTask.addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
-                   // hideProgressDialog();
-                    double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                    if(!((Activity) ProfileActivity.this).isFinishing())
-                    {
-                        //show dialog
-                        showProgressDialog("Uploading...." +(int)progress + " %" , ProfileActivity.this);
-                    }
+                    // hideProgressDialog();
 
+                    if(!ProfileActivity.this.isFinishing()) {
+                        double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                        showProgressDialog("Uploading...." + (int) progress + " %", ProfileActivity.this);
+                    }
                 }
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
@@ -543,6 +539,7 @@ public class ProfileActivity extends BaseActivity  implements
     public void getExistingImei(){
         ArrayList<String> existingImeiList = new ArrayList<>();
         ArrayList<String> existingModelList = new ArrayList<>();
+        String modelName = "";
         ModelInfo modelInfo = new ModelInfo();
 
         for(int i=0; i<appUser.getImei().size(); i++){
@@ -553,13 +550,20 @@ public class ProfileActivity extends BaseActivity  implements
         }
         TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(getApplicationContext().TELEPHONY_SERVICE);
         TelephonyManager tMgr = (TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
-        String modelName = "";
-        if(modelInfo.getSystemProperty("ro.product.device").length()>0){
-            modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.product.device");
+
+        if(ContextCompat.checkSelfPermission(ProfileActivity.this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            if(modelInfo.getSystemProperty("ro.product.device").length()>0){
+                modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.product.device");
+            }
+            else{
+                modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.build.product");
+            }
         }
         else{
-            modelName = modelInfo.getSystemProperty("ro.product.manufacturer")+ " "+modelInfo.getSystemProperty("ro.build.product");
+            return;
         }
+
+
         if(!existingImeiList.contains(modelInfo.getDeviceImei(mTelephonyManager))){
             existingImeiList.add(modelInfo.getDeviceImei(mTelephonyManager));
             dbUserRef.child(user.getUid()).child("imei").setValue(existingImeiList);
@@ -714,7 +718,7 @@ public class ProfileActivity extends BaseActivity  implements
         }
 
 
-       // Toast.makeText(this, address, Toast.LENGTH_SHORT).show();
+        // Toast.makeText(this, address, Toast.LENGTH_SHORT).show();
     }
 
     private String getAddress(double latitude, double longitude) {
@@ -724,8 +728,8 @@ public class ProfileActivity extends BaseActivity  implements
             List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
             if (addresses.size() > 0) {
                 //Address address = addresses.get(0);
-               // result.append(address.getLocality()).append("\n");
-               // result.append(address.getCountryName());
+                // result.append(address.getLocality()).append("\n");
+                // result.append(address.getCountryName());
                 result.append(addresses.get(0).getAddressLine(0)+"#");
                 result.append(addresses.get(0).getLocality() + "#");
                 result.append(addresses.get(0).getCountryName());
@@ -736,6 +740,4 @@ public class ProfileActivity extends BaseActivity  implements
 
         return result.toString();
     }
-
-
 }
