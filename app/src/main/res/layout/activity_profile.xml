@@ -244,7 +244,7 @@
                 android:textColorHint="#1b193b"
                 android:hint=""
                 android:textColor="#181737"
-                android:maxLength="30"
+                android:maxLength="100"
                 android:background="#0000"
                 android:padding="16dp"
                 android:gravity="right"

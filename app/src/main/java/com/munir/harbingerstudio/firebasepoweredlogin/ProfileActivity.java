@@ -130,6 +130,7 @@ public class ProfileActivity extends BaseActivity  implements
     private CameraPosition mCameraPosition;
     private GoogleApiClient mGoogleApiClient;
     private String placeName,vicinity = null;
+    private static boolean isActivityActive = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -160,7 +161,7 @@ public class ProfileActivity extends BaseActivity  implements
     @Override
     protected void onStart() {
         super.onStart();
-
+        isActivityActive = true;
         mLastLocation = new Location("");
         if (mGoogleApiClient != null) {
             mGoogleApiClient.connect();
@@ -171,7 +172,29 @@ public class ProfileActivity extends BaseActivity  implements
         }
 
         if (user != null) {
-           // showProgressDialog("Loading user information", ProfileActivity.this);
+            if(!isActivityActive) {
+                showProgressDialog("Loading user data....", ProfileActivity.this);
+            }
+            dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
+                        //appUser = postSnapshot.getValue(AppUser.class);
+
+                        userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
+                        appUser = postSnapshot.getValue(AppUser.class);
+                        getExistingImei();
+                        updateUI();
+
+
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
         } else {
             startActivity(new Intent(getApplicationContext(), MainActivity.class));
             finish();
@@ -184,29 +207,10 @@ public class ProfileActivity extends BaseActivity  implements
     protected void onResume() {
         super.onResume();
         checkLocationSettings();
+
         if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
             startLocationUpdate();
         }
-        dbUserRef.orderByKey().equalTo(user.getUid()).limitToFirst(1).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                    //appUser = postSnapshot.getValue(AppUser.class);
-
-                    userDataMap = (HashMap<String, Object>) postSnapshot.getValue();
-                    appUser = postSnapshot.getValue(AppUser.class);
-                    getExistingImei();
-                    updateUI();
-
-
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
 
 
     }
@@ -220,6 +224,7 @@ public class ProfileActivity extends BaseActivity  implements
     @Override
     protected void onStop() {
         super.onStop();
+        isActivityActive = false;
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
@@ -244,7 +249,7 @@ public class ProfileActivity extends BaseActivity  implements
             userName.setText(userDataMap.get("name").toString());
             userEmail.setText(userDataMap.get("email").toString());
             if (userDataMap.get("photoURL").toString() != null) {
-                Glide.with(this).load(userDataMap.get("photoURL")).fitCenter().into(userPhoto);
+                Glide.with(getApplicationContext()).load(userDataMap.get("photoURL")).fitCenter().into(userPhoto);
             }
             userLocation.setText(userDataMap.get("location").toString());
             phoneNumber.setText(userDataMap.get("phoneNumber").toString());
@@ -468,8 +473,10 @@ public class ProfileActivity extends BaseActivity  implements
                     // hideProgressDialog();
 
                     if(!ProfileActivity.this.isFinishing()) {
-                        double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                        showProgressDialog("Uploading...." + (int) progress + " %", ProfileActivity.this);
+                        if(isActivityActive) {
+                            double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                            showProgressDialog("Uploading...." + (int) progress + " %", ProfileActivity.this);
+                        }
                     }
                 }
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
