@@ -1,15 +1,17 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    compileSdkVersion 26
+    buildToolsVersion "26.0.0"
     defaultConfig {
         applicationId "com.munir.harbingerstudio.firebasepoweredlogin"
         minSdkVersion 19
-        targetSdkVersion 25
+        targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [onesignal_app_id               : "0f699716-a9e4-41e0-8889-ef41ab0b5756",
+                                onesignal_google_project_number: "217976011014"]
         multiDexEnabled true
         resConfigs "auto"
     }
@@ -37,9 +39,9 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.android.support:design:25.3.1'
-    compile "com.android.support:support-core-utils:25.4.0"
+    compile 'com.android.support:appcompat-v7:26.0.0'
+    compile 'com.android.support:design:26.0.0'
+    compile "com.android.support:support-core-utils:26.0.0"
 
     compile 'com.github.esafirm.android-image-picker:imagepicker:1.8.0'
 
@@ -48,10 +50,22 @@ dependencies {
     // Required only if Facebook login support is required
     compile('com.facebook.android:facebook-android-sdk:4.22.1')
 
-    compile 'com.google.android.gms:play-services:11.0.4'
-    compile 'com.google.android.gms:play-services-maps:11.0.4'
+    compile 'com.google.android.gms:play-services:11.2.2'
+    compile 'com.google.android.gms:play-services-maps:11.2.2'
+    compile 'com.onesignal:OneSignal:[3.6.2, 3.99.99]'
 
 
     testCompile 'junit:junit:4.12'
 }
 apply plugin: 'com.google.gms.google-services'
+
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        def requested = details.requested
+        if (requested.group == 'com.android.support') {
+            if (!requested.name.startsWith("multidex")) {
+                details.useVersion '26.0.0'
+            }
+        }
+    }
+}

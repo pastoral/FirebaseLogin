@@ -24,6 +24,7 @@ import com.firebase.ui.auth.ResultCodes;
 import com.google.android.gms.common.Scopes;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.onesignal.OneSignal;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -46,6 +47,10 @@ public class MainActivity extends BaseActivity  {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        OneSignal.startInit(this)
+                .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
+                .unsubscribeWhenNotificationsAreDisabled(true)
+                .init();
 
         firebaseAuth = FirebaseAuth.getInstance();
         relativeLayout = (RelativeLayout)findViewById(R.id.activity_main_rel);
