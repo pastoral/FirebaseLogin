@@ -1,8 +1,6 @@
 package com.munir.harbingerstudio.firebasepoweredlogin;
 
-import android.*;
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,25 +14,22 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.widget.Toolbar;
 import android.telephony.TelephonyManager;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+
 import com.bumptech.glide.Glide;
 import com.esafirm.imagepicker.features.ImagePicker;
 import com.esafirm.imagepicker.model.Image;
@@ -74,19 +69,18 @@ import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.munir.harbingerstudio.firebasepoweredlogin.model.AppUser;
+import com.onesignal.OneSignal;
 //import com.nguyenhoanglam.imagepicker.model.Config;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static android.R.id.progress;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.REQUEST_CHECK_SETTINGS;
 import static com.munir.harbingerstudio.firebasepoweredlogin.Constants.UPDATE_INTERVAL_IN_MILLISECONDS;
@@ -131,6 +125,9 @@ public class ProfileActivity extends BaseActivity  implements
     private GoogleApiClient mGoogleApiClient;
     private String placeName,vicinity = null;
     private static boolean isActivityActive = false;
+    public  ArrayList<String> existingImeiList = new ArrayList<>();
+    public ArrayList<String> existingModelList = new ArrayList<>();
+    public String userLocality = "";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -171,6 +168,23 @@ public class ProfileActivity extends BaseActivity  implements
             mRequestingLocationUpdates = true;
         }
 
+         if(user == null) {
+            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+            finish();
+        }
+    }
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        checkLocationSettings();
+
+        if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
+            startLocationUpdate();
+        }
+
         if (user != null) {
             if(!isActivityActive) {
                 showProgressDialog("Loading user data....", ProfileActivity.this);
@@ -195,23 +209,7 @@ public class ProfileActivity extends BaseActivity  implements
 
                 }
             });
-        } else {
-            startActivity(new Intent(getApplicationContext(), MainActivity.class));
-            finish();
         }
-    }
-
-
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        checkLocationSettings();
-
-        if(mRequestingLocationUpdates && mGoogleApiClient.isConnected()){
-            startLocationUpdate();
-        }
-
 
     }
 
@@ -244,6 +242,8 @@ public class ProfileActivity extends BaseActivity  implements
 
 
     public void updateUI() {
+        String imeiList = "";
+        String modelList ="";
         if (userDataMap.size() > 0) {
             hideProgressDialog();
             userName.setText(userDataMap.get("name").toString());
@@ -257,6 +257,9 @@ public class ProfileActivity extends BaseActivity  implements
             if (userProvider.equals("password")) {
                 button_change_password.setVisibility(View.VISIBLE);
             }
+
+           updateOneSignal(appUser);
+            //OneSignal.sendTag();
         }
     }
 
@@ -486,8 +489,10 @@ public class ProfileActivity extends BaseActivity  implements
                     try{
                         //dbUserRef.child(user.getUid()).child("photoURL").setValue(downloadUrl.toString());
                         String temp = " ";
+                        dbUserRef.child(user.getUid()).child("photoURL").setValue(downloadUrl);
                         updateUI();
                         //hideProgressDialog();
+
                         showSnack(coordinate_profile,"Profile picture changed");
                     }
                     catch (Exception e) {
@@ -544,9 +549,9 @@ public class ProfileActivity extends BaseActivity  implements
     }
 
     public void getExistingImei(){
-        ArrayList<String> existingImeiList = new ArrayList<>();
-        ArrayList<String> existingModelList = new ArrayList<>();
+
         String modelName = "";
+        String imei = "";
         ModelInfo modelInfo = new ModelInfo();
 
         for(int i=0; i<appUser.getImei().size(); i++){
@@ -570,9 +575,15 @@ public class ProfileActivity extends BaseActivity  implements
             return;
         }
 
+        if(ContextCompat.checkSelfPermission(ProfileActivity.this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            imei = modelInfo.getDeviceImei(mTelephonyManager);
+        }
+        else{
+            imei = "UnAccessable";
+        }
 
         if(!existingImeiList.contains(modelInfo.getDeviceImei(mTelephonyManager))){
-            existingImeiList.add(modelInfo.getDeviceImei(mTelephonyManager));
+            existingImeiList.add(imei);
             dbUserRef.child(user.getUid()).child("imei").setValue(existingImeiList);
             existingModelList.add(modelName);
             dbUserRef.child(user.getUid()).child("model").setValue(existingModelList);
@@ -740,6 +751,7 @@ public class ProfileActivity extends BaseActivity  implements
                 result.append(addresses.get(0).getAddressLine(0)+"#");
                 result.append(addresses.get(0).getLocality() + "#");
                 result.append(addresses.get(0).getCountryName());
+                userLocality = addresses.get(0).getLocality();
             }
         } catch (IOException e) {
             Log.e("tag", e.getMessage());
@@ -747,4 +759,42 @@ public class ProfileActivity extends BaseActivity  implements
 
         return result.toString();
     }
+
+    public void loadnews(View v){
+        Intent i = new Intent(this, NewsListActivity.class);
+        startActivity(i);
+    }
+
+    public void updateOneSignal(AppUser registeredUser){
+        String modelName = "";
+        String imei ="";
+        String swVersion = "";
+        ModelInfo modelInfo = new ModelInfo();
+        TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(getApplicationContext().TELEPHONY_SERVICE);
+        if(ContextCompat.checkSelfPermission(ProfileActivity.this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            imei = modelInfo.getDeviceImei(mTelephonyManager);
+        }
+        else{
+            imei = "UnAccessable";
+        }
+        if(ContextCompat.checkSelfPermission(ProfileActivity.this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            if(modelInfo.getSystemProperty("ro.product.device").length()>0){
+                modelName = modelInfo.getSystemProperty("ro.product.device");
+            }
+            else{
+                modelName = modelInfo.getSystemProperty("ro.build.product");
+            }
+        }
+        else{
+            return;
+        }
+        swVersion = modelInfo.getSystemProperty("ro.build.display.id");
+        OneSignal.sendTag("Imei",imei);
+        OneSignal.sendTag("Model",modelName);
+        OneSignal.sendTag("UserType" , registeredUser.getUserCategoryText());
+        OneSignal.sendTag("Region" , userLocality);
+        OneSignal.sendTag("SW_Version" , swVersion);
+
+    }
+
 }

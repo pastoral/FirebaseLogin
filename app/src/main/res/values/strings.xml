@@ -85,7 +85,7 @@
     <string name="facebook_application_id" translatable="false">474828542875615</string>
     <!-- Facebook Application ID, prefixed by 'fb'.  Enables Chrome Custom tabs. -->
     <!--<string name="facebook_login_protocol_scheme" translatable="false">fb109362806406193</string> -->
-    <string name = "change_email"><u>Change Email</u></string>
+    <string name="change_email"><u>Change Email</u></string>
     <string name="change_name"><u>Change Name</u></string>
     <string name="change_profile_picture"><u>Change Picture</u></string>
     <string name="change_password"><u>Change Password</u></string>

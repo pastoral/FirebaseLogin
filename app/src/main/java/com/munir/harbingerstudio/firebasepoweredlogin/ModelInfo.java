@@ -61,5 +61,6 @@ public class ModelInfo extends Application {
         }
         return number;
     }
+
 }
 

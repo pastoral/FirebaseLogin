@@ -3,6 +3,9 @@ package com.munir.harbingerstudio.firebasepoweredlogin;
 import android.app.Application;
 import android.content.Context;
 
+import com.munir.harbingerstudio.firebasepoweredlogin.onesignal.MyNotificationOpenedHandler;
+import com.munir.harbingerstudio.firebasepoweredlogin.onesignal.MyNotificationReceivedHandler;
+import com.munir.harbingerstudio.firebasepoweredlogin.receiver.ConnectivityReceiver;
 import com.onesignal.OneSignal;
 
 /**
@@ -20,9 +23,24 @@ public class OnesignalApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        mInstance = this;
+
+        context = getApplicationContext();
+
+        //MyNotificationOpenedHandler : This will be called when a notification is tapped on.
+        //MyNotificationReceivedHandler : This will be called when a notification is received while your app is running.
         OneSignal.startInit(this)
-                .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
-                .unsubscribeWhenNotificationsAreDisabled(true)
+                .setNotificationOpenedHandler(new MyNotificationOpenedHandler())
+                .setNotificationReceivedHandler( new MyNotificationReceivedHandler() )
                 .init();
+
     }
+
+    public static synchronized OnesignalApp getmInstance(){
+        return mInstance;
+    }
+    public void setConnectiviyListner(ConnectivityReceiver.ConnectivityReceiverListner listner){
+        ConnectivityReceiver.connectivityReceiverListner = listner;
+    }
+
 }
